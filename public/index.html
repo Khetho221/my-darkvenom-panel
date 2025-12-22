@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>DARKVENOM SNI CHECKER</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-..." crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  <style>
+    * { box-sizing: border-box; font-family: Arial, sans-serif; }
+    body { margin: 0; background: #f2f6ff; display: flex; justify-content: center; align-items: center; min-height: 100vh; transition: background 0.3s; }
+
+    .container { background: white; width: 100%; max-width: 500px; padding: 25px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); transition: background 0.3s; }
+
+    h1 { text-align: center; color: #2563eb; margin-bottom: 5px; }
+    .admin { text-align: center; font-size: 12px; color: #555; margin-bottom: 20px; }
+
+    input { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; }
+
+    button { padding: 10px 15px; margin: 5px 0; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; }
+    .btn-primary { background: #2563eb; color: white; }
+    .btn-primary:hover { background: #1e40af; }
+    .btn-danger { background: #f44336; color: white; }
+    .btn-danger:hover { background: #c53030; }
+    .btn-secondary { background: #6b7280; color: white; }
+    .btn-secondary:hover { background: #4b5563; }
+
+    #dashboard { display: none; }
+    .message { margin-bottom: 10px; padding: 10px; border-radius: 8px; font-size: 14px; display: none; }
+    .success { background: #d1fae5; color: #065f46; }
+    .error { background: #fee2e2; color: #991b1b; }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background: #2563eb; color: white; border-radius: 8px; }
+    tr:nth-child(even) { background: #f9f9f9; }
+    tr:hover { background: #e0e7ff; }
+    td .fa { margin-right: 5px; cursor: pointer; }
+
+    #themeToggle { float: right; margin-bottom: 15px; cursor: pointer; }
+  </style>
+</head>
+
+<body>
+
+  <!-- Login Container -->
+  <div class="container" id="loginContainer">
+    <h1>DARKVENOM SNI CHECKER</h1>
+    <div class="admin">ADMIN PANEL ONLY</div>
+
+    <input id="username" type="text" placeholder="Admin Username">
+    <input id="license" type="text" placeholder="Admin License Key">
+
+    <button class="btn-primary" onclick="login()">Login</button>
+    <div id="loginMessage" class="message"></div>
+  </div>
+
+  <!-- Dashboard Container -->
+  <div class="container" id="dashboard">
+    <h1>
+      Admin Dashboard
+      <i id="themeToggle" class="fa-solid fa-moon"></i>
+    </h1>
+
+    <div id="successMessage" class="message success"></div>
+    <div id="errorMessage" class="message error"></div>
+
+    <input id="searchUser" type="text" placeholder="Search Users..." onkeyup="filterUsers()">
+
+    <h3>Manage Users</h3>
+    <input id="newUsername" type="text" placeholder="Username">
+    <input id="newLicense" type="text" placeholder="License Key">
+    <button class="btn-primary" onclick="addUser()">Add User</button>
+
+    <table id="userTable">
+      <thead>
+        <tr>
+          <th>Username</th>
+          <th>License Key</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Users added here -->
+      </tbody>
+    </table>
+
+    <button class="btn-danger" onclick="logout()">Logout</button>
+  </div>
+
+  <script>
+    // Admin credentials
+    const adminUsername = "darkvenom";
+    const adminLicense = "darkvenom042";
+
+    let users = [];
+
+    function showMessage(type, text) {
+      const successDiv = document.getElementById("successMessage");
+      const errorDiv = document.getElementById("errorMessage");
+      if(type === "success") {
+        successDiv.style.display = "block";
+        successDiv.textContent = text;
+        errorDiv.style.display = "none";
+      } else {
+        errorDiv.style.display = "block";
+        errorDiv.textContent = text;
+        successDiv.style.display = "none";
+      }
+    }
+
+    function hideMessages() {
+      document.getElementById("successMessage").style.display = "none";
+      document.getElementById("errorMessage").style.display = "none";
+    }
+
+    function login() {
+      const username = document.getElementById("username").value;
+      const license = document.getElementById("license").value;
+
+      if(!username || !license) { showMessage("error","❌ Fill in all fields"); return; }
+
+      if(username === adminUsername && license === adminLicense) {
+        document.getElementById("loginContainer").style.display = "none";
+        document.getElementById("dashboard").style.display = "block";
+        showMessage("success", "✅ Welcome Admin DARKVENOM");
+      } else {
+        showMessage("error", "❌ Access denied (Admin only)");
+      }
+    }
+
+    function logout() {
+      document.getElementById("loginContainer").style.display = "block";
+      document.getElementById("dashboard").style.display = "none";
+      document.getElementById("username").value = "";
+      document.getElementById("license").value = "";
+      hideMessages();
+    }
+
+    function renderUsers() {
+      const tbody = document.querySelector("#userTable tbody");
+      tbody.innerHTML = "";
+      users.forEach((user, index) => {
+        const tr = document.createElement("tr");
+        tr.setAttribute("draggable", "true");
+        tr.setAttribute("data-index", index);
+
+        tr.innerHTML = `
+          <td>${user.username}</td>
+          <td>${user.license}</td>
+          <td>
+            <i class="fa fa-pencil btn-secondary" onclick="editUser(${index})"></i>
+            <i class="fa fa-trash btn-danger" onclick="removeUser(${index})"></i>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      enableDragSort();
+    }
+
+    function addUser() {
+      const username = document.getElementById("newUsername").value.trim();
+      const license = document.getElementById("newLicense").value.trim();
+      if(!username || !license) { showMessage("error", "❌ Fill in all fields to add user"); return; }
+      users.push({ username, license });
+      document.getElementById("newUsername").value = "";
+      document.getElementById("newLicense").value = "";
+      showMessage("success", "✅ User added successfully");
+      renderUsers();
+    }
+
+    function editUser(index) {
+      const user = users[index];
+      const newUsername = prompt("Edit Username:", user.username);
+      if(newUsername === null) return;
+      const newLicense = prompt("Edit License Key:", user.license);
+      if(newLicense === null) return;
+      users[index] = { username: newUsername, license: newLicense };
+      showMessage("success", "✅ User updated successfully");
+      renderUsers();
+    }
+
+    function removeUser(index) {
+      if(confirm("Are you sure you want to remove this user?")) {
+        users.splice(index, 1);
+        showMessage("success", "✅ User removed successfully");
+        renderUsers();
+      }
+    }
+
+    function filterUsers() {
+      const filter = document.getElementById("searchUser").value.toLowerCase();
+      const rows = document.querySelectorAll("#userTable tbody tr");
+      rows.forEach(row => {
+        const username = row.children[0].textContent.toLowerCase();
+        const license = row.children[1].textContent.toLowerCase();
+        row.style.display = (username.includes(filter) || license.includes(filter)) ? "" : "none";
+      });
+    }
+
+    // Drag and drop sort
+    function enableDragSort() {
+      const rows = document.querySelectorAll("#userTable tbody tr");
+      let dragIndex = null;
+
+      rows.forEach(row => {
+        row.ondragstart = (e) => { dragIndex = +row.dataset.index; };
+        row.ondragover = (e) => { e.preventDefault(); row.style.background="#e0e7ff"; };
+        row.ondragleave = (e) => { row.style.background=""; };
+        row.ondrop = (e) => {
+          e.preventDefault();
+          const dropIndex = +row.dataset.index;
+          const temp = users[dragIndex];
+          users.splice(dragIndex,1);
+          users.splice(dropIndex,0,temp);
+          renderUsers();
+        };
+      });
+    }
+
+    // Theme toggle
+    let dark = false;
+    document.getElementById("themeToggle").onclick = () => {
+      dark = !dark;
+      if(dark){
+        document.body.style.background="#1f2937";
+        document.querySelectorAll(".container").forEach(c=>c.style.background="#374151");
+        document.querySelectorAll("h1, th, .admin").forEach(e=>e.style.color="#f9fafb");
+      } else {
+        document.body.style.background="#f2f6ff";
+        document.querySelectorAll(".container").forEach(c=>c.style.background="white");
+        document.querySelectorAll("h1, th, .admin").forEach(e=>e.style.color="#2563eb");
+      }
+    }
+
+  </script>
+
+</body>
+</html>
