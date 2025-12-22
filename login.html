@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Login</title>
+  <style>
+    body {
+      background:#0b0b0f;
+      color:white;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      height:100vh;
+      font-family:Arial;
+    }
+    .box {
+      background:#141420;
+      padding:30px;
+      border-radius:10px;
+      width:300px;
+      text-align:center;
+    }
+    input,button {
+      width:100%;
+      padding:10px;
+      margin:10px 0;
+      border-radius:6px;
+      border:none;
+    }
+    button {
+      background:#7c4dff;
+      color:white;
+    }
+  </style>
+</head>
+<body>
+<div class="box">
+  <h2>Login</h2>
+  <input id="username" placeholder="Username">
+  <input id="license" placeholder="License Key">
+  <button onclick="login()">Login</button>
+  <p id="msg"></p>
+</div>
+
+<script>
+async function login(){
+  const res = await fetch("/api/login",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      username:username.value,
+      license_key:license.value
+    })
+  });
+  const data = await res.json();
+  if(data.status==="ok"){
+    alert("Login success");
+  } else {
+    msg.innerText=data.message;
+  }
+}
+</script>
+</body>
+</html>
