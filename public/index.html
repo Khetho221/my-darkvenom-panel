@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DARKVENOM SNI CHECKER – ADMIN PANEL</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body{margin:0;font-family:Arial;background:#0f172a;color:#e5e7eb}
+header{background:#020617;padding:15px;text-align:center;font-size:20px;font-weight:bold}
+.container{max-width:1200px;margin:auto;padding:15px}
+.card{background:#020617;border:1px solid #1e293b;border-radius:10px;padding:15px;margin-bottom:20px}
+.hidden{display:none}
+input,select,button{width:100%;padding:10px;margin-top:8px;background:#020617;color:#e5e7eb;border:1px solid #334155;border-radius:6px}
+button:hover{background:#1e293b}
+.table-wrap{overflow-x:auto}
+table{width:100%;min-width:700px;border-collapse:collapse}
+th,td{padding:10px;border-bottom:1px solid #1e293b}
+th{color:#38bdf8}
+td button{margin-bottom:6px}
+.open{color:#22c55e;font-weight:bold}
+.closed{color:#ef4444;font-weight:bold}
+.msg{margin-top:10px;color:#38bdf8}
+</style>
+</head>
+
+<body>
+<header>DARKVENOM SNI CHECKER – ADMIN PANEL</header>
+
+<div class="container">
+
+<!-- LOGIN -->
+<div class="card" id="loginBox">
+  <h3>Admin Login</h3>
+  <input id="loginUser" placeholder="Username">
+  <input id="loginPass" type="password" placeholder="Password">
+  <button onclick="login()">Login</button>
+  <div id="loginMsg" class="msg"></div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="hidden">
+
+<div class="card">
+  <h3>App Control</h3>
+  Status: <span id="appStatus"></span>
+  <button onclick="toggleApp()">Toggle App</button>
+</div>
+
+<div class="card">
+  <h3>Add Member</h3>
+  <input id="mUser" placeholder="Username">
+  <input id="mTag" placeholder="Tag (FREE / VIP / etc)">
+  <input id="mDays" type="number" placeholder="Days">
+  <button onclick="addMember()">Add Member</button>
+</div>
+
+<div class="card">
+  <h3>Members</h3>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>User</th><th>License</th><th>Tag</th><th>Days</th><th>Actions</th></tr>
+      </thead>
+      <tbody id="membersTable"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <h3>Add Admin</h3>
+  <input id="aUser" placeholder="Username">
+  <input id="aPass" placeholder="Password">
+  <select id="aRole">
+    <option value="VIP">VIP</option>
+    <option value="SUPER">SUPER</option>
+  </select>
+  <button onclick="addAdmin()">Add Admin</button>
+</div>
+
+<div class="card">
+  <h3>Admins</h3>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>User</th><th>Password</th><th>Role</th><th>Actions</th></tr>
+      </thead>
+      <tbody id="adminsTable"></tbody>
+    </table>
+  </div>
+</div>
+
+</div>
+
+<script>
+/* DATA */
+let admins=[
+ {u:"DARKVENOM",p:"DARKVENOM-AGENT042",r:"OWNER"},
+ {u:"PlayboyRSA",p:"rsa123",r:"VIP"}
+];
+let members=[],appOpen=true,currentUser=null;
+
+/* STORAGE */
+const save=()=>localStorage.setItem("data",JSON.stringify({admins,members,appOpen}));
+const load=()=>{
+ let d=JSON.parse(localStorage.getItem("data"));
+ if(d){admins=d.admins;members=d.members;appOpen=d.appOpen}
+};
+load();
+
+/* LOGIN */
+function login(){
+ let u=loginUser.value,p=loginPass.value;
+ let f=admins.find(a=>a.u===u&&a.p===p);
+ if(!f){loginMsg.innerText="Invalid credentials";return}
+ currentUser=f;
+ loginBox.classList.add("hidden");
+ dashboard.classList.remove("hidden");
+ render();
+}
+
+/* HELPERS */
+const isOwner=()=>currentUser.r==="OWNER";
+const isVIP=()=>currentUser.r==="VIP";
+
+/* RENDER */
+function render(){
+ appStatus.innerHTML=appOpen?"<span class='open'>OPEN</span>":"<span class='closed'>CLOSED</span>";
+ membersTable.innerHTML="";
+ members.forEach((m,i)=>{
+ membersTable.innerHTML+=`
+ <tr>
+  <td>${m.u}</td><td>${m.k}</td><td>${m.tag}</td><td>${m.days}</td>
+  <td><button onclick="delMember(${i})">Delete</button></td>
+ </tr>`;
+ });
+ adminsTable.innerHTML="";
+ admins.forEach((a,i)=>{
+ let canSee=isOwner()||(isVIP()&&a.u!=="DARKVENOM");
+ adminsTable.innerHTML+=`
+ <tr>
+  <td>${a.u}</td>
+  <td>${canSee?`<input value="${a.p}" onchange="editPass(${i},this.value)">`:"••••••"}</td>
+  <td>${a.r}</td>
+  <td>${a.r!=="OWNER"?`<button onclick="delAdmin(${i})">Remove</button>`:""}</td>
+ </tr>`;
+ });
+ save();
+}
+
+/* LOGIC */
+const genKey=()=>crypto.randomUUID().replace(/-/g,"").slice(0,24).toUpperCase();
+
+function addMember(){
+ if(!mUser.value||!mDays.value)return;
+ members.push({u:mUser.value,tag:mTag.value,days:+mDays.value,k:genKey()});
+ mUser.value=mTag.value=mDays.value="";
+ render();
+}
+function delMember(i){members.splice(i,1);render()}
+
+function addAdmin(){
+ if(!isOwner()&&!isVIP())return;
+ admins.push({u:aUser.value,p:aPass.value,r:aRole.value});
+ aUser.value=aPass.value="";
+ render();
+}
+function delAdmin(i){
+ if(admins[i].r==="OWNER")return;
+ admins.splice(i,1);render();
+}
+function editPass(i,v){admins[i].p=v;render()}
+
+function toggleApp(){
+ if(isOwner()||isVIP()){
+ appOpen=!appOpen;
+ render();
+ }
+}
+
+render();
+</script>
+</body>
+</html>
